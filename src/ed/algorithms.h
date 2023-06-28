@@ -3,8 +3,12 @@
 #define _ALGORITHMS_H_
 
 #include "labirinto.h"
-#include "celula.h"
 
+typedef struct Celula{
+    int x, y;
+    double g, h;
+    struct Celula *pai;
+}Celula;
 
 typedef struct
 {

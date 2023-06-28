@@ -74,6 +74,7 @@ void labirinto_destruir(Labirinto *l)
 
 void _labirinto_print_celula(unsigned char val)
 {
+    printf("\x1B[0m");
     switch (val)
     {
     case LIVRE:
@@ -83,23 +84,24 @@ void _labirinto_print_celula(unsigned char val)
         printf("# ");
         break;
     case FRONTEIRA:
-        printf("F ");
+        printf("\x1B[34mF ");
         break;
     case EXPANDIDO:
-        printf("X ");
+        printf("\x1B[32mX ");
         break;
     case CAMINHO:
-        printf("O ");
+        printf("\x1B[33mO ");
         break;
     case INICIO:
-        printf("I ");
+        printf("\x1B[31mI ");
         break;
     case FIM:
-        printf("[]");
+        printf("\x1B[31m[]");
         break;
     default:
         printf("Tipo invalido de celula.\n");
     }
+    printf("\x1B[0m");
 }
 
 void labirinto_print(Labirinto *l)

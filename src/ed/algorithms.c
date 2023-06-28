@@ -53,7 +53,7 @@ ResultData caminho(Celula *current, ResultData result)
 
         if (pai)
         {
-            result.custo_caminho = sqrt(pow(current->x - pai->x, 2) + pow(current->y - pai->y, 2));
+            result.custo_caminho += sqrt(pow(current->x - pai->x, 2) + pow(current->y - pai->y, 2));
         }
         current = pai;
     }

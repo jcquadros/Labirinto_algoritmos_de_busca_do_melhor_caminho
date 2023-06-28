@@ -1,4 +1,4 @@
-
+/*
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -90,4 +90,4 @@ int main()
   heap_destroy(heap);
 
   return 0;
-}
+}*/

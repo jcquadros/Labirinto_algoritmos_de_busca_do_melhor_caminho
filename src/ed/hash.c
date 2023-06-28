@@ -123,10 +123,16 @@ void *hash_table_pop(HashTable *h, void *key)
         return NULL;
     }
 
+    void *val = item->val;
     forward_list_remove(list, item);
+    if(forward_list_size(list) == 0){
+        forward_list_destroy(list);
+        h->buckets[hash] = NULL;
+    }
+    _hash_pair_destroy(item);
     h->n_elements--;
 
-    return item;
+    return val;
 }
 
 

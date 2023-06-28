@@ -1,11 +1,7 @@
-
-#include "heap.h"
 #include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
-#define INITIAL_CAPACITY 10
+#include "heap.h"
 #define GROWTH_FACTOR 2
+#define INITIAL_CAPACITY 10
 
 typedef struct HeapNode
 {
@@ -23,15 +19,32 @@ struct Heap
 
 Heap *heap_construct(HashTable *h)
 {
-    Heap *heap = calloc(1, sizeof(Heap));
-    heap->nodes = calloc(INITIAL_CAPACITY, sizeof(HeapNode));
-    heap->capacity = INITIAL_CAPACITY;
-    heap->size = 0;
+    Heap *heap = (Heap *)malloc(sizeof(Heap));
+    heap->nodes = (HeapNode *)calloc(INITIAL_CAPACITY, sizeof(HeapNode));
     heap->hash = h;
+    heap->size = 0;
+    heap->capacity = INITIAL_CAPACITY;
     return heap;
 }
+void _hash_table_set(HashTable *h, void *data, int index){
+    int *new_index = (int *)malloc(sizeof(int));
+    *new_index = index;
+    new_index = hash_table_set(h, data, new_index);
+    if (new_index != NULL)
+        free(new_index); 
+}
 
-void _heapify(Heap *heap, int idx)
+void _swap(Heap *heap, int i, int j)
+{
+    HeapNode tmp = heap->nodes[i];
+    heap->nodes[i] = heap->nodes[j];
+    heap->nodes[j] = tmp;
+    
+    _hash_table_set(heap->hash, heap->nodes[i].data, i);
+    _hash_table_set(heap->hash, heap->nodes[j].data, j);
+}
+
+void _heapfy_up(Heap *heap, int idx)
 {
     int idx_child = idx;
     int idx_parent = (idx - 1) / 2;
@@ -40,8 +53,7 @@ void _heapify(Heap *heap, int idx)
 
     while (idx_child > 0 && child.priority < parent.priority)
     {
-        heap->nodes[idx_child] = parent;
-        heap->nodes[idx_parent] = child;
+        _swap(heap, idx_child, idx_parent);
 
         idx_child = idx_parent;
         idx_parent = (idx_child - 1) / 2;
@@ -51,7 +63,7 @@ void _heapify(Heap *heap, int idx)
     }
 }
 
-void _heapify_down(Heap *heap)
+void _heapfy_down(Heap *heap, int index)
 {
     int idx_parent = 0;
     int idx_child_left = 2 * idx_parent + 1;
@@ -69,14 +81,13 @@ void _heapify_down(Heap *heap)
             }
         }
         // se o pai for menor que o filho, não precisa trocar
-        if (heap->nodes[idx_parent].priority < heap->nodes[idx_child].priority)
+        if (heap->nodes[idx_parent].priority < heap->nodes[idx_child].priority || idx_child >= heap->size)
         {
             break;
         }
-        // trocando pai com filho
-        HeapNode temp = heap->nodes[idx_parent];
-        heap->nodes[idx_parent] = heap->nodes[idx_child];
-        heap->nodes[idx_child] = temp;
+
+        // trocando
+        _swap(heap, idx_parent, idx_child);
 
         // atualizando indices
         idx_parent = idx_child;
@@ -85,73 +96,38 @@ void _heapify_down(Heap *heap)
     }
 }
 
-void _heap_att_hash(Heap *heap){
-    for(int i = 0; i < heap->size; i++){
-        int *idx = malloc(sizeof(int));
-        idx = hash_table_set(heap->hash, heap->nodes[i].data, idx);
-        if(idx != NULL){
-            free(idx);
-        }
-    }
-}
-
-// to do: a heap push function that updates the priority of an element if it is already in the heap and retorna um void pointer para a data caso ela ja esteja no heap e tenha sido atualizada ou retorna nulo caso contrario
 void *heap_push(Heap *heap, void *data, double priority)
 {
-    // se o elemento ja estiver no heap, atualiza a prioridade
-    int *idx = hash_table_get(heap->hash, data);
-    if (idx != NULL)
+    int *index = (int *)hash_table_get(heap->hash, data);
+    if (index != NULL)
     {
-        if (priority < heap->nodes[*idx].priority)
-        {
-            heap->nodes[*idx].priority = priority;
-            void *data_aux = heap->nodes[*idx].data;
-            heap->nodes[*idx].data = data;
-            data = data_aux;
-            _heapify(heap, *idx);
-            _heap_att_hash(heap);
-        }
+        int index = *(int *)hash_table_get(heap->hash, data);
 
+        if (priority < heap->nodes[index].priority)
+        {
+            heap->nodes[index].priority = priority;
+            void *tmp = heap->nodes[index].data;
+            heap->nodes[index].data = data;
+            data = tmp;
+            _heapfy_up(heap, index);
+        }
+        
         return data;
     }
 
-    // se o heap estiver cheio, aumenta a capacidade
     if (heap->size == heap->capacity)
     {
         heap->capacity *= GROWTH_FACTOR;
-        heap->nodes = realloc(heap->nodes, heap->capacity * sizeof(HeapNode));
+        heap->nodes = (HeapNode *)realloc(heap->nodes, heap->capacity * sizeof(HeapNode));
     }
 
-    // adicionando o elemento no heap
     heap->nodes[heap->size].data = data;
     heap->nodes[heap->size].priority = priority;
-    heap->size += 1;
+    heap->size++;
     
-    int *idx_ = malloc(sizeof(int));
-    *idx_ = heap->size - 1;
-    hash_table_set(heap->hash, data, idx);
-
-    _heapify(heap, heap->size - 1);
-    _heap_att_hash(heap);
+    _hash_table_set(heap->hash, heap->nodes[heap->size - 1].data, heap->size - 1);
+    _heapfy_up(heap, heap->size - 1);
     return NULL;
-}
-
-void *heap_pop(Heap *heap)
-{
-    if (heap_empty(heap))
-    {
-        return NULL;
-    }
-    void *data = heap->nodes[0].data;
-    HashTableItem *item = hash_table_pop(heap->hash, data);
-    free(item->val);
-    free(item);
-
-    heap->nodes[0] = heap->nodes[heap->size - 1];
-    heap->size -= 1;
-    _heapify_down(heap);
-    _heap_att_hash(heap);
-    return data;
 }
 
 bool heap_empty(Heap *heap)
@@ -161,12 +137,30 @@ bool heap_empty(Heap *heap)
 
 void *heap_max(Heap *heap)
 {
+    if (heap->size == 0)
+        return NULL;
     return heap->nodes[0].data;
 }
 
 double heap_min_priority(Heap *heap)
 {
+    if (heap->size == 0)
+        return 0;
     return heap->nodes[0].priority;
+}
+
+void *heap_pop(Heap *heap)
+{
+    if (heap->size == 0)
+        return NULL;
+    void *data = heap->nodes[0].data;
+    _swap(heap, 0, heap->size - 1);
+    heap->size--;
+    void *val = hash_table_pop(heap->hash, data);
+    if(val != NULL)
+        free(val);
+    _heapfy_down(heap, 0);
+    return data;
 }
 
 void heap_destroy(Heap *heap)
