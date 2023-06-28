@@ -81,7 +81,7 @@ void _heapfy_down(Heap *heap, int index)
             }
         }
         // se o pai for menor que o filho, não precisa trocar
-        if (heap->nodes[idx_parent].priority < heap->nodes[idx_child].priority || idx_child >= heap->size)
+        if (heap->nodes[idx_parent].priority < heap->nodes[idx_child].priority)
         {
             break;
         }
@@ -106,9 +106,9 @@ void *heap_push(Heap *heap, void *data, double priority)
         if (priority < heap->nodes[index].priority)
         {
             heap->nodes[index].priority = priority;
-            void *tmp = heap->nodes[index].data;
-            heap->nodes[index].data = data;
-            data = tmp;
+            //void *tmp = heap->nodes[index].data;
+            //heap->nodes[index].data = data;
+            //data = tmp;
             _heapfy_up(heap, index);
         }
         
@@ -165,7 +165,7 @@ void *heap_pop(Heap *heap)
 
 void heap_destroy(Heap *heap)
 {
-    hash_table_destroy(heap->hash);
+    //hash_table_destroy(heap->hash);
     free(heap->nodes);
     free(heap);
 }

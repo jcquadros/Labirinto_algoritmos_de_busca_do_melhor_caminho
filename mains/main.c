@@ -43,6 +43,7 @@ int main()
     lab = labirinto_carregar(arquivo_labirinto);
     Celula inicio = {0, 9, NULL};
     Celula fim = {9, 0, NULL};
+    
     labirinto_atribuir(lab, inicio.y, inicio.x, INICIO);
     labirinto_atribuir(lab, fim.y, fim.x, FIM);
     
