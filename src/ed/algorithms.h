@@ -6,7 +6,7 @@
 
 typedef struct Celula{
     int x, y;
-    //double g, h;
+    double g, h;
     struct Celula *pai;
 }Celula;
 

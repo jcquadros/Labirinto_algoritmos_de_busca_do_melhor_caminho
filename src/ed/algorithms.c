@@ -7,6 +7,7 @@
 #include "vector.h"
 #include "hash.h"
 #include "queue.h"
+#include "heap.h"
 
 int direcao[8][2] = {{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}}; // direcao dos nos vizinhos a serem explorados em ordem de prioridade
 
@@ -15,6 +16,8 @@ Celula *celula_create(int x, int y, Celula *pai)
     Celula *c = malloc(sizeof(Celula));
     c->x = x;
     c->y = y;
+    c->g = 0;
+    c->h = 0;
     c->pai = pai;
     return c;
 }
@@ -40,6 +43,11 @@ int celula_cmp(void *c1, void *c2)
         return 0;
     else
         return 1;
+}
+
+double celula_distancia_euclidiana(Celula *c1, Celula *c2)
+{
+    return sqrt(pow(c1->x - c2->x, 2) + pow(c1->y - c2->y, 2));
 }
 
 ResultData caminho(Celula *current, ResultData result)
@@ -82,8 +90,81 @@ ResultData _default_result()
 
 ResultData a_star(Labirinto *l, Celula inicio, Celula fim)
 {
-    // TODO!
-    return _default_result();
+    ResultData result = _default_result();
+    int max_path_length = labirinto_n_colunas(l) * labirinto_n_linhas(l);
+    result.caminho = (Celula *)malloc(sizeof(Celula) * max_path_length);
+
+    HashTable *hash = hash_table_construct(101, celula_hash, celula_cmp);
+    Heap *heap = heap_construct(hash);
+
+    Celula *current = celula_create(inicio.x, inicio.y, NULL);
+    current->g = 0;
+    current->h = celula_distancia_euclidiana(current, &fim);
+    heap_push(heap, current, current->g + current->h);
+
+    Vector *expanded = vector_create(free);
+
+    while (!heap_empty(heap))
+    {
+        current = heap_pop(heap);
+        labirinto_atribuir(l, current->y, current->x, EXPANDIDO);
+        result.nos_expandidos++;
+
+        vector_push_back(expanded, current);
+
+        if (current->x == fim.x && current->y == fim.y)
+        {
+            result = caminho(current, result);
+            break;
+        }
+
+        for (int i = 0; i < 8; i++)
+        {
+            int x = current->x + direcao[i][0];
+            int y = current->y + direcao[i][1];
+
+            if (x >= 0 && y >= 0 && x < labirinto_n_colunas(l) && y < labirinto_n_linhas(l))
+            {
+                unsigned char valor = labirinto_obter(l, y, x);
+                if (valor != OCUPADO && valor != EXPANDIDO)
+                {
+                    labirinto_atribuir(l, y, x, FRONTEIRA);
+                    Celula *c = celula_create(x, y, current);
+                    c->g = current->g + celula_distancia_euclidiana(current, c);
+                    c->h = celula_distancia_euclidiana(c, &fim);
+                    c = heap_push(heap, c, c->g + c->h);
+
+                    if(c){
+                        celula_destroy(c);
+                    }
+                }
+            }
+        }
+    }
+
+    if (result.sucesso == 0)
+    {
+        free(result.caminho);
+        result.caminho = NULL;
+    }
+
+    HashTableIterator *it = hash_table_iterator(hash);
+
+    while (!hash_table_iterator_is_over(it))
+    {
+        HashTableItem *item = hash_table_iterator_next(it);
+        Celula *cel = (Celula *)item->key;
+        int *pos = (int *)item->val;
+        celula_destroy(cel);
+        free(pos);
+    }
+
+    hash_table_iterator_destroy(it);
+    hash_table_destroy(hash);
+    heap_destroy(heap);
+    vector_destroy(expanded);
+
+    return result;
 }
 
 ResultData breadth_first_search(Labirinto *l, Celula inicio, Celula fim)
@@ -95,7 +176,7 @@ ResultData breadth_first_search(Labirinto *l, Celula inicio, Celula fim)
     Queue *queue = queue_construct(free);
     queue_push(queue, celula_create(inicio.x, inicio.y, NULL));
 
-    Stack *expanded = stack_construct(free);
+    Vector *expanded = vector_create(free);
 
     while (!queue_empty(queue))
     {
@@ -103,7 +184,7 @@ ResultData breadth_first_search(Labirinto *l, Celula inicio, Celula fim)
         labirinto_atribuir(l, current->y, current->x, EXPANDIDO);
         result.nos_expandidos++;
 
-        stack_push(expanded, current);
+        vector_push_back(expanded, current);
 
         if (current->x == fim.x && current->y == fim.y)
         {
@@ -127,15 +208,15 @@ ResultData breadth_first_search(Labirinto *l, Celula inicio, Celula fim)
             }
         }
     }
-    
-    if(result.sucesso == 0)
+
+    if (result.sucesso == 0)
     {
         free(result.caminho);
         result.caminho = NULL;
     }
 
     queue_destroy(queue);
-    stack_destroy(expanded);
+    vector_destroy(expanded);
 
     return result;
 }
@@ -149,7 +230,7 @@ ResultData depth_first_search(Labirinto *l, Celula inicio, Celula fim)
     Stack *stack = stack_construct(free);
     stack_push(stack, celula_create(inicio.x, inicio.y, NULL));
 
-    Stack *expanded = stack_construct(free);
+    Vector *expanded = vector_create(free);
 
     while (!stack_empty(stack))
     {
@@ -157,7 +238,7 @@ ResultData depth_first_search(Labirinto *l, Celula inicio, Celula fim)
         labirinto_atribuir(l, current->y, current->x, EXPANDIDO);
         result.nos_expandidos++;
 
-        stack_push(expanded, current);
+        vector_push_back(expanded, current);
 
         if (current->x == fim.x && current->y == fim.y)
         {
@@ -181,15 +262,15 @@ ResultData depth_first_search(Labirinto *l, Celula inicio, Celula fim)
             }
         }
     }
-    
-    if(result.sucesso == 0)
+
+    if (result.sucesso == 0)
     {
         free(result.caminho);
         result.caminho = NULL;
     }
 
     stack_destroy(stack);
-    stack_destroy(expanded);
+    vector_destroy(expanded);
 
     return result;
 }

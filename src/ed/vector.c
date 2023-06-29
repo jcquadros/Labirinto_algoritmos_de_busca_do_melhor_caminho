@@ -60,7 +60,7 @@ void vector_destroy(Vector *vector)
     {
         while (!vector_is_empty(vector))
         {
-            vector_pop_back(vector);
+            vector->destroy_fn(vector_pop_back(vector));
         }
     }
     free(vector->data);
